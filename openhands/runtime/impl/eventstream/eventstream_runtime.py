@@ -298,21 +298,23 @@ class EventStreamRuntime(Runtime):
         if not use_host_network:
             port_mapping = {f'{self._container_port}/tcp': [{'HostPort': str(self._host_port)}]}
             
-            # Add port range if specified in environment variable
-            port_range = os.environ.get('SANDBOX_RUNTIME_EXPOSE_PORT_RANGE')
-            if port_range and '-' in port_range:
-                try:
-                    start_port, end_port = map(int, port_range.split('-'))
-                    if start_port > end_port:
-                        logger.warning(f'Invalid port range {port_range}: start port must be less than end port')
-                    elif start_port < 1 or end_port > 65535:
-                        logger.warning(f'Invalid port range {port_range}: ports must be between 1 and 65535')
-                    else:
-                        for port in range(start_port, end_port + 1):
-                            port_mapping[f'{port}/tcp'] = [{'HostPort': str(port)}]
-                        logger.debug(f'Added port range mapping {start_port}-{end_port}')
-                except ValueError:
-                    logger.warning(f'Invalid port range format {port_range}: must be in format START-END (e.g. 3001-6000)')
+            # Add port ranges if specified in environment variable
+            port_ranges = os.environ.get('SANDBOX_RUNTIME_EXPOSE_PORT_RANGE')
+            if port_ranges:
+                for port_range in port_ranges.split(','):
+                    if '-' in port_range:
+                        try:
+                            start_port, end_port = map(int, port_range.strip().split('-'))
+                            if start_port > end_port:
+                                logger.warning(f'Invalid port range {port_range}: start port must be less than end port')
+                            elif start_port < 1 or end_port > 65535:
+                                logger.warning(f'Invalid port range {port_range}: ports must be between 1 and 65535')
+                            else:
+                                for port in range(start_port, end_port + 1):
+                                    port_mapping[f'{port}/tcp'] = [{'HostPort': str(port)}]
+                                logger.info(f'[Port Range] Mapped ports {start_port}-{end_port} for container {self.container_name}')
+                        except ValueError:
+                            logger.warning(f'Invalid port range format {port_range}: must be in format START-END (e.g. 3001-6000)')
 
         if use_host_network:
             self.log(
