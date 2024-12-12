@@ -1,12 +1,20 @@
 import { Suggestions } from "#/components/features/suggestions/suggestions";
 import BuildIt from "#/icons/build-it.svg?react";
-import { SUGGESTIONS } from "#/utils/suggestions";
+import { INITIAL_SUGGESTIONS, getSuggestions } from "#/utils/suggestions";
+import { useEffect, useState } from "react";
 
 interface ChatSuggestionsProps {
   onSuggestionsClick: (value: string) => void;
 }
 
 export function ChatSuggestions({ onSuggestionsClick }: ChatSuggestionsProps) {
+  const [suggestions, setSuggestions] = useState(INITIAL_SUGGESTIONS);
+
+  useEffect(() => {
+    // Load dynamic suggestions when component mounts
+    getSuggestions().then(setSuggestions).catch(console.error);
+  }, []);
+
   return (
     <div className="flex flex-col gap-6 h-full px-4 items-center justify-center">
       <div className="flex flex-col items-center p-4 bg-neutral-700 rounded-xl w-full">
@@ -16,7 +24,7 @@ export function ChatSuggestions({ onSuggestionsClick }: ChatSuggestionsProps) {
         </span>
       </div>
       <Suggestions
-        suggestions={Object.entries(SUGGESTIONS.repo)
+        suggestions={Object.entries(suggestions.repo)
           .slice(0, 4)
           .map(([label, value]) => ({
             label,

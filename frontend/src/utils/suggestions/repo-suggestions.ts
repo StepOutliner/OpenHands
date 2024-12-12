@@ -39,7 +39,8 @@ const VALUE_6 = `Investigate the current repo to understand the installation ins
 
 If there is an existing Dockerfile, and there are ways to improve it according to best practices, do so.`;
 
-export const REPO_SUGGESTIONS: Record<string, string> = {
+// Base suggestions that are always available
+export const BASE_REPO_SUGGESTIONS: Record<string, string> = {
   [KEY_1]: VALUE_1,
   [KEY_2]: VALUE_2,
   [KEY_3]: VALUE_3,
@@ -47,3 +48,36 @@ export const REPO_SUGGESTIONS: Record<string, string> = {
   [KEY_5]: VALUE_5,
   [KEY_6]: VALUE_6,
 };
+
+// Function to create a dynamic suggestion for initializing a project
+export function createInitSuggestion(projectPath: string): [string, string] {
+  const key = `Init app with prompt in ${projectPath}/docs/openhands-first-query.md`;
+  const value = `Please read the prompt from ${projectPath}/docs/openhands-first-query.md and use it to initialize the application according to the specifications in that file.`;
+  return [key, value];
+}
+
+// Function to get all suggestions including dynamic ones
+export async function getRepoSuggestions(): Promise<Record<string, string>> {
+  try {
+    // Get projects with init files
+    const response = await fetch('/api/scan-init-projects');
+    if (!response.ok) {
+      console.error('Failed to scan for init projects:', await response.text());
+      return BASE_REPO_SUGGESTIONS;
+    }
+
+    const projectPaths = await response.json();
+    const suggestions = { ...BASE_REPO_SUGGESTIONS };
+
+    // Add dynamic suggestions for each project
+    for (const path of projectPaths) {
+      const [key, value] = createInitSuggestion(path);
+      suggestions[key] = value;
+    }
+
+    return suggestions;
+  } catch (error) {
+    console.error('Error getting repo suggestions:', error);
+    return BASE_REPO_SUGGESTIONS;
+  }
+}

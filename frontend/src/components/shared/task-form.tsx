@@ -9,7 +9,7 @@ import {
   setInitialQuery,
 } from "#/state/initial-query-slice";
 import { SuggestionBubble } from "#/components/features/suggestions/suggestion-bubble";
-import { SUGGESTIONS } from "#/utils/suggestions";
+import { INITIAL_SUGGESTIONS, getSuggestions } from "#/utils/suggestions";
 import { convertImageToBase64 } from "#/utils/convert-image-to-base-64";
 import { ChatInput } from "#/components/features/chat/chat-input";
 import { getRandomKey } from "#/utils/get-random-key";
@@ -28,15 +28,21 @@ export const TaskForm = React.forwardRef<HTMLFormElement>((_, ref) => {
   );
 
   const [text, setText] = React.useState("");
+  const [suggestions, setSuggestions] = React.useState(INITIAL_SUGGESTIONS);
   const [suggestion, setSuggestion] = React.useState(
-    getRandomKey(SUGGESTIONS["non-repo"]),
+    getRandomKey(INITIAL_SUGGESTIONS["non-repo"]),
   );
   const [inputIsFocused, setInputIsFocused] = React.useState(false);
 
+  React.useEffect(() => {
+    // Load dynamic suggestions when component mounts
+    getSuggestions().then(setSuggestions).catch(console.error);
+  }, []);
+
   const onRefreshSuggestion = () => {
-    const suggestions = SUGGESTIONS["non-repo"];
+    const currentSuggestions = suggestions["non-repo"];
     // remove current suggestion to avoid refreshing to the same suggestion
-    const suggestionCopy = { ...suggestions };
+    const suggestionCopy = { ...currentSuggestions };
     delete suggestionCopy[suggestion];
 
     const key = getRandomKey(suggestionCopy);
@@ -44,8 +50,8 @@ export const TaskForm = React.forwardRef<HTMLFormElement>((_, ref) => {
   };
 
   const onClickSuggestion = () => {
-    const suggestions = SUGGESTIONS["non-repo"];
-    const value = suggestions[suggestion];
+    const currentSuggestions = suggestions["non-repo"];
+    const value = currentSuggestions[suggestion];
     setText(value);
   };
 

@@ -309,6 +309,38 @@ async def save_file(request: Request):
         raise HTTPException(status_code=500, detail=f'Error saving file: {e}')
 
 
+@app.get('/scan-init-projects')
+async def scan_init_projects(request: Request):
+    """Scan the workspace for projects containing docs/openhands-first-query.md.
+
+    Returns:
+        list: A list of project paths that contain the init query file.
+    """
+    if not request.state.conversation.runtime:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={'error': 'Runtime not yet initialized'},
+        )
+
+    runtime: Runtime = request.state.conversation.runtime
+    try:
+        # List all files in the workspace
+        file_list = await call_sync_from_async(runtime.list_files)
+        
+        # Find all docs/openhands-first-query.md files
+        init_files = [f for f in file_list if f.endswith('/docs/openhands-first-query.md')]
+        
+        # Get project paths (parent directory of docs)
+        project_paths = [os.path.dirname(os.path.dirname(f)) for f in init_files]
+        
+        return project_paths
+    except RuntimeUnavailableError as e:
+        logger.error(f'Error scanning for init projects: {e}', exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={'error': f'Error scanning for init projects: {e}'},
+        )
+
 @app.get('/zip-directory')
 async def zip_current_workspace(request: Request, background_tasks: BackgroundTasks):
     try:
