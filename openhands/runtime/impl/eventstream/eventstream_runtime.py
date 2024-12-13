@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import Callable
 from zipfile import ZipFile
 
-from openhands.core.logger import openhands_logger as logger
-
 import docker
 import requests
 import tenacity
@@ -231,7 +229,6 @@ class EventStreamRuntime(Runtime):
                     platform=self.config.sandbox.platform,
                     extra_deps=self.config.sandbox.runtime_extra_deps,
                     force_rebuild=self.config.sandbox.force_rebuild_runtime,
-                    extra_build_args=self.config.sandbox.runtime_extra_build_args,
                 )
 
             self.log(
@@ -296,25 +293,42 @@ class EventStreamRuntime(Runtime):
         # Initialize port mapping with the default container port
         port_mapping: dict[str, list[dict[str, str]]] | None = None
         if not use_host_network:
-            port_mapping = {f'{self._container_port}/tcp': [{'HostPort': str(self._host_port)}]}
-            
+            port_mapping = {
+                f'{self._container_port}/tcp': [{'HostPort': str(self._host_port)}]
+            }
+
             # Add port ranges if specified in environment variable
             port_ranges = os.environ.get('SANDBOX_RUNTIME_EXPOSE_PORT_RANGE')
+            port_range_separator = os.environ.get(
+                'SANDBOX_RUNTIME_EXPOSE_PORT_RANGE_SEPARATOR', ','
+            )
             if port_ranges:
-                for port_range in port_ranges.split(','):
+                for port_range in port_ranges.split(port_range_separator):
                     if '-' in port_range:
                         try:
-                            start_port, end_port = map(int, port_range.strip().split('-'))
+                            start_port, end_port = map(
+                                int, port_range.strip().split('-')
+                            )
                             if start_port > end_port:
-                                logger.warning(f'Invalid port range {port_range}: start port must be less than end port')
+                                logger.warning(
+                                    f'Invalid port range {port_range}: start port must be less than end port'
+                                )
                             elif start_port < 1 or end_port > 65535:
-                                logger.warning(f'Invalid port range {port_range}: ports must be between 1 and 65535')
+                                logger.warning(
+                                    f'Invalid port range {port_range}: ports must be between 1 and 65535'
+                                )
                             else:
                                 for port in range(start_port, end_port + 1):
-                                    port_mapping[f'{port}/tcp'] = [{'HostPort': str(port)}]
-                                logger.info(f'[Port Range] Mapped ports {start_port}-{end_port} for container {self.container_name}')
+                                    port_mapping[f'{port}/tcp'] = [
+                                        {'HostPort': str(port)}
+                                    ]
+                                logger.info(
+                                    f'[Port Range] Mapped ports {start_port}-{end_port} for container {self.container_name}'
+                                )
                         except ValueError:
-                            logger.warning(f'Invalid port range format {port_range}: must be in format START-END (e.g. 3001-6000)')
+                            logger.warning(
+                                f'Invalid port range format {port_range}: must be in format START-END (e.g. 3001-6000)'
+                            )
 
         if use_host_network:
             self.log(
